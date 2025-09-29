@@ -11,9 +11,10 @@ pyaudio==0.2.14
 torch==2.1.0
 torchaudio==2.1.0
 
-# LLM & NLP (for later phases)
+# LLM & NLP
 openai==1.6.1
 langchain==0.1.0
+langchain-community==0.0.10
 transformers==4.36.0
 sentence-transformers==2.2.2
 

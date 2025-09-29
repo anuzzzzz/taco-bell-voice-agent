@@ -42,10 +42,16 @@ class VoicePipeline:
         # Initialize PyAudio
         self.audio = pyaudio.PyAudio()
         
-        # Initialize TTS
-        self.tts_engine = pyttsx3.init()
-        self.tts_engine.setProperty('rate', 180)  # Speed
-        self.tts_engine.setProperty('volume', 0.9)
+        # Initialize TTS (use macOS say command as fallback)
+        try:
+            self.tts_engine = pyttsx3.init()
+            self.tts_engine.setProperty('rate', 180)  # Speed
+            self.tts_engine.setProperty('volume', 0.9)
+            self.use_mac_say = False
+        except:
+            print(f"{Fore.YELLOW}Warning: pyttsx3 failed, using macOS 'say' command")
+            self.tts_engine = None
+            self.use_mac_say = True
         
         print(f"{Fore.GREEN}✓ Voice Pipeline initialized successfully!")
     
@@ -146,8 +152,13 @@ class VoicePipeline:
     def speak(self, text: str):
         """Convert text to speech"""
         print(f"{Fore.MAGENTA}🔊 Speaking: {text}")
-        self.tts_engine.say(text)
-        self.tts_engine.runAndWait()
+        if self.use_mac_say:
+            # Use macOS say command
+            import subprocess
+            subprocess.run(['say', text], check=False)
+        else:
+            self.tts_engine.say(text)
+            self.tts_engine.runAndWait()
     
     def process_voice_input(self) -> Tuple[str, float]:
         """
