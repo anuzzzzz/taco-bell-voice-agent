@@ -1,0 +1,51 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Project specific
+*.wav
+*.mp3
+temp_*
+recordings/
+models/
+*.pth
+*.pt
+
+# Environment variables
+.env
+.env.local
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Whisper models cache
+~/.cache/whisper/
+
+# Logs
+*.log
+logs/
+
+# API Keys (safety)
+*api_key*
+*secret*
+credentials.json
