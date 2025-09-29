@@ -55,7 +55,7 @@ class TacoBellIntentDetector:
         if not api_key:
             raise ValueError("No OpenAI API key found in .env file")
 
-        self.client = OpenAI()
+        self.client = OpenAI(api_key=api_key)
         self.model = model
         
         # Taco Bell menu for context
