@@ -199,11 +199,11 @@ class TacoBellIntentDetector:
     
     def _generate_response(self, intent: OrderIntent, data: dict) -> str:
         """Generate appropriate response based on intent"""
-        
+
         if intent == OrderIntent.ORDER_ITEM:
             items = data.get('items', [])
             quantities = data.get('quantities', {})
-            
+
             if items:
                 # Build order confirmation
                 order_parts = []
@@ -213,11 +213,11 @@ class TacoBellIntentDetector:
                         order_parts.append(f"{qty} {item}s")
                     else:
                         order_parts.append(f"a {item}")
-                
+
                 return f"Alright, I've got {', '.join(order_parts)}. Would you like anything else?"
             else:
                 return "Sure! What would you like to order today?"
-        
+
         elif intent == OrderIntent.MODIFY_ITEM:
             mods = data.get('modifications', [])
             if mods and isinstance(mods, list) and len(mods) > 0:
@@ -227,28 +227,40 @@ class TacoBellIntentDetector:
                     mod_text = str(mods[0])
                 return f"Got it, {mod_text}. Anything else?"
             return "No problem, I'll make that change. Anything else?"
-        
+
+        elif intent == OrderIntent.REMOVE_ITEM:
+            items = data.get('items', [])
+            quantities = data.get('quantities', {})
+            if items:
+                item_name = items[0]
+                qty = quantities.get(item_name, 1)
+                if qty > 0:
+                    return f"Removing {qty} {item_name}{'s' if qty > 1 else ''} from your order."
+                else:
+                    return f"Removing {item_name} from your order."
+            return "What would you like to remove?"
+
         elif intent == OrderIntent.CONFIRM_ORDER:
             return "Perfect! Your total will be displayed on the screen. Please pull forward to the window."
-        
+
         elif intent == OrderIntent.ASK_MENU:
             return "We have tacos, burritos, crunchwraps, nachos, and drinks. What sounds good today?"
-        
+
         elif intent == OrderIntent.ASK_PRICE:
             items = data.get('items', [])
             if items:
                 return f"Let me check the price for {items[0]} for you."
             return "Which item would you like to know the price for?"
-        
+
         elif intent == OrderIntent.GREETING:
             return "Welcome to Taco Bell! What can I get started for you today?"
-        
+
         elif intent == OrderIntent.CANCEL_ORDER:
             return "No problem, let's start over. What would you like today?"
-        
+
         elif intent == OrderIntent.REPEAT_ORDER:
             return "Let me repeat your order back to you..."
-        
+
         else:
             return "I'm sorry, could you please repeat that?"
     

@@ -120,31 +120,34 @@ class ConversationManager:
     def process_input(self, user_input: str) -> Tuple[str, ConversationState]:
         """
         Process user input and return response with new state
-        
+
         Args:
             user_input: Customer's speech/text
-            
+
         Returns:
             Tuple of (response, new_state)
         """
         # Add to history
         self.conversation_history.append(f"Customer: {user_input}")
-        
+
         # Get intent
         intent_result = self.intent_detector.detect_intent(
-            user_input, 
+            user_input,
             self.conversation_history[-self.context_window:]
         )
-        
+
         # Process based on current state and intent
         response = self._handle_state_intent(intent_result)
-        
+
         # Add response to history
         self.conversation_history.append(f"Agent: {response}")
-        
+
+        # Log actual agent response
+        print(f"{Fore.GREEN}Agent response: '{response}'")
+
         # Log state
         self._log_state()
-        
+
         return response, self.state
     
     def _handle_state_intent(self, intent_result: IntentResult) -> str:
@@ -203,6 +206,19 @@ class ConversationManager:
                 return "You haven't ordered anything yet. What would you like?"
         
         elif intent.intent == OrderIntent.REMOVE_ITEM:
+            # Check if it's a quantity reduction or full removal
+            quantities = intent.entities.get('quantities', {})
+            if quantities:
+                # Handle "remove one taco" type requests
+                for item_name, qty in quantities.items():
+                    for order_item in self.order.items:
+                        if item_name.lower() in order_item.name.lower():
+                            if order_item.quantity > qty:
+                                order_item.quantity -= qty
+                                return f"Removed {qty} {order_item.name}. You now have {order_item.quantity}."
+                            else:
+                                self.order.items.remove(order_item)
+                                return f"Removed all {order_item.name} from your order."
             return self._handle_remove_item(intent)
         
         elif intent.intent == OrderIntent.MODIFY_ITEM:
@@ -289,22 +305,55 @@ class ConversationManager:
         return f"Got it, {', '.join(last_item.modifications)} for your {last_item.name}. Anything else?"
     
     def _handle_remove_item(self, intent: IntentResult) -> str:
-        """Handle item removal"""
+        """Handle item removal with better matching"""
         items = intent.entities.get('items', [])
-        
+
+        if not items and not self.order.items:
+            return "Your order is empty. What would you like to add?"
+
         if not items:
             return "What would you like to remove?"
-        
+
         removed = []
         for item_name in items:
-            if self.order.remove_item(item_name):
-                removed.append(item_name)
-        
+            found = False
+            # Try to find matching items in order
+            for order_item in self.order.items[:]:  # Copy list for safe iteration
+                # Check for partial match (e.g., "taco" matches "Crunchy Taco")
+                if (item_name.lower() in order_item.name.lower() or
+                    order_item.name.lower() in item_name.lower()):
+
+                    # Check for quantity reduction
+                    quantities = intent.entities.get('quantities', {})
+                    reduce_by = quantities.get(item_name, 0)
+
+                    if reduce_by and order_item.quantity > reduce_by:
+                        # Reduce quantity
+                        order_item.quantity -= reduce_by
+                        removed.append(f"{reduce_by} {order_item.name}")
+                    else:
+                        # Remove entire item
+                        self.order.items.remove(order_item)
+                        removed.append(order_item.name)
+                    found = True
+                    break
+
+            if not found:
+                # Try using menu search to find the item
+                search_results = self.menu_rag.search_menu(item_name, top_k=1)
+                if search_results:
+                    menu_item_name = search_results[0].item.name
+                    for order_item in self.order.items[:]:
+                        if order_item.name == menu_item_name:
+                            self.order.items.remove(order_item)
+                            removed.append(order_item.name)
+                            found = True
+                            break
+
         if removed:
             return f"I've removed {', '.join(removed)} from your order. Anything else?"
         else:
             return "I couldn't find that item in your order."
-    
     def _handle_price_inquiry(self, intent: IntentResult) -> str:
         """Handle price inquiries"""
         items = intent.entities.get('items', [])
@@ -345,6 +394,10 @@ class ConversationManager:
         print(f"{Fore.CYAN}State: {self.state.value}")
         print(f"{Fore.YELLOW}Order items: {len(self.order.items)}")
         if self.order.items:
+            print(f"{Fore.MAGENTA}Current order:")
+            for item in self.order.items:
+                mods = f" ({', '.join(item.modifications)})" if item.modifications else ""
+                print(f"  • {item.quantity}x {item.name}{mods} - ${item.get_total_price():.2f}")
             print(f"{Fore.GREEN}Total: ${self.order.get_total():.2f}")
     
     def reset(self):
