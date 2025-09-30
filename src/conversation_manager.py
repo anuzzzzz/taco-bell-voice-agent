@@ -7,6 +7,8 @@ from colorama import Fore, init
 
 from src.intent_detector_llm import TacoBellIntentDetector, OrderIntent, IntentResult
 from src.menu_rag import TacoBellMenuRAG, MenuItem
+from src.response_generator import TacoBellResponseGenerator, ResponseContext
+from src.brand_voice import BrandTone
 
 init(autoreset=True)
 
@@ -90,7 +92,8 @@ class ConversationManager:
         # Initialize components
         self.intent_detector = TacoBellIntentDetector()
         self.menu_rag = TacoBellMenuRAG()
-        
+        self.response_generator = TacoBellResponseGenerator()
+
         # State transition rules
         self.transitions = {
             ConversationState.GREETING: [ConversationState.TAKING_ORDER],
@@ -177,12 +180,13 @@ class ConversationManager:
     def _handle_greeting(self, intent: IntentResult) -> str:
         """Handle greeting state"""
         self.state = ConversationState.TAKING_ORDER
-        
+
         if intent.intent == OrderIntent.ORDER_ITEM:
             # Customer jumped straight to ordering
             return self._process_order_item(intent)
         else:
-            return "Welcome to Taco Bell! What can I get started for you today?"
+            # Use time-based greeting
+            return self.response_generator.get_time_based_greeting()
     
     def _handle_taking_order(self, intent: IntentResult) -> str:
         """Handle order-taking state"""
@@ -389,6 +393,41 @@ class ConversationManager:
         self.state = ConversationState.GOODBYE
         return "Thank you! Your order will be ready at the window."
     
+    def _generate_enhanced_response(self, intent_result: IntentResult, custom_context: str = None) -> str:
+        """Generate enhanced response using response generator"""
+
+        # Prepare order items list
+        order_items = [item.name for item in self.order.items]
+
+        # Create context
+        context = ResponseContext(
+            intent=intent_result.intent,
+            entities=intent_result.entities,
+            conversation_history=self.conversation_history[-4:],
+            current_order=order_items,
+            order_total=self.order.get_total(),
+            tone=self._determine_tone(intent_result),
+            include_upsell=(len(self.order.items) > 0 and
+                           self.state == ConversationState.TAKING_ORDER),
+            custom_context=custom_context
+        )
+
+        return self.response_generator.generate_response(context)
+
+    def _determine_tone(self, intent_result: IntentResult) -> BrandTone:
+        """Determine appropriate tone based on context"""
+
+        if intent_result.intent == OrderIntent.CANCEL_ORDER:
+            return BrandTone.APOLOGETIC
+        elif intent_result.intent == OrderIntent.CONFIRM_ORDER:
+            return BrandTone.EXCITED
+        elif intent_result.intent == OrderIntent.UNCLEAR:
+            return BrandTone.FRIENDLY
+        elif intent_result.intent == OrderIntent.GREETING:
+            return BrandTone.CASUAL
+        else:
+            return BrandTone.FRIENDLY
+
     def _log_state(self):
         """Log current conversation state"""
         print(f"{Fore.CYAN}State: {self.state.value}")
