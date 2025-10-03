@@ -1,3 +1,15 @@
+Demo:
+# 🤖 Taco Bell Voice Agent
+
+[![Demo Video](https://img.shields.io/badge/▶️-Watch%20Demo-red?style=for-the-badge)](https://drive.google.com/file/d/1Af7CGjDUn8tH5ZHo4JSH-6UEsHCW-IqG/view?usp=sharing)
+
+An AI-powered voice ordering system that automates drive-thru conversations using Whisper ASR, GPT-3.5, and semantic search.
+
+
+
+[rest of your existing README]
+
+
 # 🌮 Taco Bell Voice Agent
 
 An AI-powered voice assistant for drive-thru ordering that actually works. Built with GPT-3.5, Whisper, and a semantic search system over the menu.
